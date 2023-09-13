@@ -1,0 +1,277 @@
+Server-side Program:EchoServer.c
+/*Required Headers*/
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <stdio.h>
+#include<string.h>
+int main()
+{
+ char str[100];
+ int listen_fd, comm_fd;
+ struct sockaddr_in servaddr;
+ listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+ bzero( &servaddr, sizeof(servaddr));
+ servaddr.sin_family = AF_INET;
+ servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+ servaddr.sin_port = htons(22000);
+ bind(listen_fd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+ listen(listen_fd, 10);
+ 
+ while(1)
+ {
+ comm_fd = accept(listen_fd, (struct sockaddr*) NULL, NULL);
+ bzero( str, 100);
+ recv(comm_fd,str,100,0);
+ 
+ printf("Echoing back - %s",str);
+ send(comm_fd,str,strlen(str),0);
+close(comm_fd);
+ }
+}
+Client Side Program: EchoClient.c
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <stdio.h>
+#include<string.h>
+int main(int argc,char **argv)
+{
+ int sockfd,n;
+ char sendline[100];
+ char recvline[100];
+ struct sockaddr_in servaddr;
+ sockfd=socket(AF_INET,SOCK_STREAM,0);
+ bzero(&servaddr,sizeof servaddr);
+ servaddr.sin_family=AF_INET;
+ servaddr.sin_port=htons(22000);
+ servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+ //inet_pton(AF_INET,"127.0.0.1",&(servaddr.sin_addr));
+ connect(sockfd,(struct sockaddr *)&servaddr,sizeof(servaddr));
+ while(1)
+ {
+ bzero( sendline, 100);
+ bzero( recvline, 100);
+ fgets(sendline,100,stdin); /*stdin = 0 , for standard input */
+send(sockfd,sendline,strlen(sendline),0);
+ recv(sockfd,recvline,100,0);
+ printf("%s",recvline);
+ }
+}
+
+-----X----
+LAB 3 
+
+
+#include <stdio.h>
+#include <signal.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#define MAX 80
+#define PORT 8080
+#define SA struct sockaddr
+// Function designed for chat between client and server.
+void func(int sockfd, short cport)
+{
+char buff[MAX];
+int n;
+
+// infinite loop for chat
+for (;;) {
+    bzero(buff, MAX); // set buff with null values
+// read the message from client and copy it in buffer
+    read(sockfd, buff, sizeof(buff));
+	//recvfrom
+// print buffer which contains the client contents
+    printf("From client(%d): %s\nTo client(%d) : ",cport, buff,cport);
+    bzero(buff, MAX);
+    n = 0;
+ // copy server message in the buffer
+    while ((buff[n++] = getchar()) != '\n')
+      ;
+// and send that buffer to client
+    write(sockfd, buff, sizeof(buff));
+	//sendto
+// if msg contains "Exit" then server exit and chat ended.
+   if (strncmp("exit", buff, 4) == 0) {
+    printf("Server Exit...\n");
+   break;
+   }
+}
+}
+
+
+
+// Driver function
+int main()
+{
+int sockfd, connfd, len;
+struct sockaddr_in servaddr, cli;
+pid_t pid;
+//void sig_chld(int);
+// socket create and verification
+sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+if (sockfd == -1) {
+printf("socket creation failed...\n");
+exit(0);
+}
+else
+printf("Socket successfully created..\n");
+
+
+
+bzero(&servaddr, sizeof(servaddr));
+// assign IP, PORT
+servaddr.sin_family = AF_INET;
+servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+servaddr.sin_port = htons(PORT);
+
+
+
+// Binding newly created socket to given IP and verification
+if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
+printf("socket bind failed...\n");
+exit(0);
+}
+else
+printf("Socket successfully binded..\n");
+// Now server is ready to listen and verification
+if ((listen(sockfd, 5)) != 0) {
+printf("Listen failed...\n");
+exit(0);
+}
+else
+printf("Server listening..\n");
+len = sizeof(cli);
+
+
+while(1){
+// Accept the data packet from client and verification
+connfd = accept(sockfd, (SA*)&cli, &len);
+if (connfd < 0) {
+printf("server acccept failed...\n");
+exit(0);
+}
+else{
+printf("server acccept the client...\n");
+short c_port= ntohs(cli.sin_port);
+// Function for chatting between client and server	
+func(connfd,c_port);
+  }//end else
+}//end while(1)
+
+close(sockfd);// After chatting close the socket
+}
+
+
+--x---
+
+#include<sys/socket.h>
+#include<netdb.h>
+#include<string.h>
+#include<stdlib.h>
+#include<stdio.h>
+
+int main()
+{
+char buff[80];
+int sockfd,len,n;
+struct sockaddr_in servaddr;
+sockfd=socket(AF_INET,SOCK_DGRAM,0);
+if(sockfd==-1)
+{
+printf("socket creation failed...\n");
+exit(0);
+}
+else
+printf("Socket successfully created..\n");
+bzero(&servaddr,sizeof(len));
+servaddr.sin_family=AF_INET;
+servaddr.sin_addr.s_addr=inet_addr("127.0.0.1");
+servaddr.sin_port=htons(43454);
+len=sizeof(servaddr);
+
+
+printf("\nEnter string : ");
+n=0;
+while((buff[n++]=getchar())!='\n')
+	;
+
+
+sendto(sockfd,buff,sizeof(buff),0,(struct sockaddr *)&servaddr,len);
+bzero(buff,sizeof(buff));
+recvfrom(sockfd,buff,sizeof(buff),0,(struct sockaddr *)&servaddr,&len);
+printf("From Server : %s\n",buff);
+
+close(sockfd);
+}
+
+
+-----X----
+LAB 4
+cc
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#define MAX 80
+#define PORT 8080
+#define SA struct sockaddr
+void func(int sockfd)
+{
+char buff[MAX];
+int n;
+for (;;) {
+bzero(buff, sizeof(buff));
+printf("Enter the string : ");
+n = 0;
+while ((buff[n++] = getchar()) != '\n')
+;
+write(sockfd, buff, sizeof(buff));//send the message to server
+bzero(buff, sizeof(buff)); //nullifies the buffer content
+read(sockfd, buff, sizeof(buff)); //reading the message recived from server
+printf("From Server : %s", buff);
+if ((strncmp(buff, "exit", 4)) == 0) {
+printf("Client Exit...\n");
+close(sockfd);
+break;
+}
+}
+}
+int main()
+{
+int sockfd, connfd;
+struct sockaddr_in servaddr, cli;
+// socket create and varification
+sockfd = socket(AF_INET, SOCK_STREAM, 0);
+if (sockfd == -1) {
+printf("socket creation failed...\n");
+exit(0);
+}
+else
+printf("Socket successfully created..\n");
+bzero(&servaddr, sizeof(servaddr));
+// assign IP, PORT
+servaddr.sin_family = AF_INET;
+servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+servaddr.sin_port = htons(PORT);
+// connect the client socket to server socket
+if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) {
+printf("connection with the server failed...\n");
+exit(0);
+}
+else
+printf("connected to the server..\n");
+// function for chat
+func(sockfd);
+// close the socket
+close(sockfd);
+}
